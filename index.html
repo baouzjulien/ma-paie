@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ma Paie">
+<meta name="theme-color" content="#0a0f1e">
+<title>Ma Fiche de Paie</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0f1e; --surface:#111827; --surface2:#1a2235; --border:#1e2d45;
+    --accent:#00d4ff; --accent2:#ff6b35; --accent3:#7cf5a2; --text:#e8edf5; --muted:#5a7090;
+    --card-r:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 80% 10%,rgba(0,212,255,.07) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 10% 80%,rgba(124,245,162,.05) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:0 0 120px;}
+
+  /* HEADER */
+  header{padding:40px 20px 20px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;}
+  .logo-label{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--accent);font-family:'DM Mono',monospace;margin-bottom:4px;}
+  h1{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;line-height:1.1;background:linear-gradient(135deg,#e8edf5 0%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+
+  /* YEAR/MONTH NAV */
+  .nav-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .year-ctrl{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:5px 10px;}
+  .year-btn{background:none;border:none;color:var(--accent);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;}
+  .year-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);min-width:36px;text-align:center;}
+  .month-select{background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;outline:none;cursor:pointer;}
+
+  /* SAVED BADGE */
+  .saved-badge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(124,245,162,.1);color:var(--accent3);border:1px solid rgba(124,245,162,.2);display:none;}
+  .saved-badge.visible{display:inline-block;}
+
+  /* HERO */
+  .hero-card{margin:0 16px 16px;background:linear-gradient(135deg,#0d2040 0%,#0a1a35 50%,#0d2040 100%);border:1px solid rgba(0,212,255,.2);border-radius:24px;padding:24px 24px 20px;position:relative;overflow:hidden;}
+  .hero-card::after{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(0,212,255,.12) 0%,transparent 70%);pointer-events:none;}
+  .hero-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+  .hero-amount{font-family:'Syne',sans-serif;font-size:44px;font-weight:800;line-height:1;color:#fff;letter-spacing:-1px;}
+  .hero-amount span{font-size:26px;color:var(--accent);}
+  .hero-sub{margin-top:6px;font-size:13px;color:var(--muted);}
+  .hero-pills{margin-top:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .pill{background:rgba(255,255,255,.07);border-radius:20px;padding:4px 10px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .pill.orange{background:rgba(255,107,53,.12);color:var(--accent2);}
+  .pill.blue{background:rgba(0,212,255,.1);color:var(--accent);}
+  .pill.green{background:rgba(124,245,162,.1);color:var(--accent3);}
+
+  /* SECTIONS */
+  .section{margin:0 16px 14px;}
+  .section-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;padding-left:4px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-r);overflow:hidden;}
+  .row{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border);gap:12px;transition:background .15s;}
+  .row:last-child{border-bottom:none;}
+  .row:focus-within{background:var(--surface2);}
+  .row-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .icon-blue{background:rgba(0,212,255,.1);} .icon-orange{background:rgba(255,107,53,.1);} .icon-green{background:rgba(124,245,162,.1);} .icon-purple{background:rgba(180,120,255,.1);}
+  .row-info{flex:1;min-width:0;}
+  .row-label{font-size:13px;font-weight:500;color:var(--text);}
+  .row-desc{font-size:10px;color:var(--muted);margin-top:1px;}
+  .row-input-wrap{display:flex;align-items:center;gap:4px;}
+  input[type=number]{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;font-weight:500;padding:6px 10px;width:82px;text-align:right;outline:none;transition:border .2s;-moz-appearance:textfield;}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  input:focus{border-color:var(--accent);}
+  .unit{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+  .locked-row .row-input-wrap{opacity:.4;pointer-events:none;}
+
+  /* BUTTONS */
+  .btn-calc{display:block;width:calc(100% - 32px);margin:0 16px 14px;background:var(--accent);color:var(--bg);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border:none;border-radius:14px;padding:16px;cursor:pointer;transition:all .2s;box-shadow:0 0 30px rgba(0,212,255,.2);}
+  .btn-calc:hover{transform:translateY(-1px);box-shadow:0 4px 30px rgba(0,212,255,.35);}
+  .btn-calc:active{transform:translateY(0);}
+
+  /* DATA TOOLBAR */
+  .data-toolbar{margin:0 16px 14px;display:flex;gap:8px;flex-wrap:wrap;}
+  .btn-tool{flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:11px 14px;cursor:pointer;transition:all .2s;}
+  .btn-tool:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-tool.danger:hover{border-color:var(--accent2);color:var(--accent2);}
+  .btn-tool .ico{font-size:15px;}
+  #importFile{display:none;}
+
+  /* ANNUAL RECAP */
+  .recap-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  .recap-month{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all .2s;}
+  .recap-month:hover{border-color:var(--accent);background:var(--surface2);}
+  .recap-month.active{border-color:var(--accent);background:rgba(0,212,255,.05);}
+  .recap-month.empty{opacity:.4;}
+  .recap-month-name{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;}
+  .recap-month-net{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);}
+  .recap-month-net.has-data{color:var(--accent3);}
+  .recap-total{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
+  .recap-total-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);}
+  .recap-total-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--accent);}
+
+  /* RESULTS */
+  .result-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-r);overflow:hidden;}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(30,45,69,.6);}
+  .result-row:last-child{border-bottom:none;}
+  .result-row.subtotal{background:rgba(255,255,255,.02);}
+  .result-row.exo{background:rgba(124,245,162,.04);}
+  .result-row.total{background:rgba(0,212,255,.05);border-top:1px solid rgba(0,212,255,.15);padding:14px 16px;}
+  .result-label{color:var(--muted);font-size:12px;}
+  .result-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--text);}
+  .result-val.pos{color:var(--accent3);} .result-val.neg{color:var(--accent2);} .result-val.neu{color:var(--text);}
+  .result-val.big{font-family:'Syne',sans-serif;font-size:18px;color:var(--accent);}
+  .divider-row{padding:5px 16px;background:rgba(0,212,255,.03);border-bottom:1px solid var(--border);}
+  .divider-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);opacity:.7;}
+  .note{font-size:11px;color:var(--muted);padding:10px 16px;text-align:center;line-height:1.5;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;color:var(--text);transition:transform .3s ease;z-index:999;white-space:nowrap;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* INSTALL */
+  .install-banner{margin:0 16px 14px;background:rgba(124,245,162,.08);border:1px solid rgba(124,245,162,.2);border-radius:12px;padding:12px 16px;display:none;align-items:center;gap:12px;}
+  .install-banner.visible{display:flex;}
+  .install-banner p{font-size:12px;color:var(--accent3);line-height:1.4;flex:1;}
+  .btn-install{background:var(--accent3);color:#0a0f1e;font-family:'DM Mono',monospace;font-size:11px;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="logo-label">Calcul Mensuel</div>
+      <h1>Ma Fiche<br>de Paie</h1>
+    </div>
+    <div class="nav-bar">
+      <div class="year-ctrl">
+        <button class="year-btn" onclick="changeYear(-1)">‹</button>
+        <span class="year-val" id="yearVal">2025</span>
+        <button class="year-btn" onclick="changeYear(1)">›</button>
+      </div>
+      <select class="month-select" id="monthSel" onchange="loadMonth()">
+        <option value="0">Janvier</option><option value="1">Février</option>
+        <option value="2">Mars</option><option value="3">Avril</option>
+        <option value="4">Mai</option><option value="5">Juin</option>
+        <option value="6">Juillet</option><option value="7">Août</option>
+        <option value="8">Septembre</option><option value="9">Octobre</option>
+        <option value="10">Novembre</option><option value="11">Décembre</option>
+      </select>
+      <span class="saved-badge" id="savedBadge">✓ sauvegardé</span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero-card">
+    <div class="hero-label">📋 Net estimé</div>
+    <div class="hero-amount" id="heroNet">—<span> €</span></div>
+    <div class="hero-sub" id="heroSub">Renseigne tes heures ci-dessous</div>
+    <div class="hero-pills">
+      <span class="pill" id="brutPill">Brut : — €</span>
+      <span class="pill orange" id="cotPill">Cotis. : — €</span>
+      <span class="pill blue" id="exoPill">⚡ TEPA : — €</span>
+      <span class="pill green" id="fraisPill">🧾 Frais : — €</span>
+    </div>
+  </div>
+
+  <!-- INSTALL -->
+  <div class="install-banner" id="installBanner">
+    <span style="font-size:20px">📲</span>
+    <p>Installe l'app sur ton écran d'accueil !</p>
+    <button class="btn-install" id="installBtn">Installer</button>
+  </div>
+
+  <!-- BASE -->
+  <div class="section">
+    <div class="section-title">Base contractuelle (fixe)</div>
+    <div class="card">
+      <div class="row locked-row">
+        <div class="row-icon icon-blue">💶</div>
+        <div class="row-info"><div class="row-label">Taux horaire brut</div><div class="row-desc">13 € / heure</div></div>
+        <div class="row-input-wrap"><input type="number" id="tauxH" value="13" step="0.01"><span class="unit">€/h</span></div>
+      </div>
+      <div class="row locked-row">
+        <div class="row-icon icon-blue">📅</div>
+        <div class="row-info"><div class="row-label">Heures base (35h)</div><div class="row-desc">151,67 h/mois</div></div>
+        <div class="row-input-wrap"><input type="number" id="hBase" value="151.67" step="0.01"><span class="unit">h</span></div>
+      </div>
+      <div class="row locked-row">
+        <div class="row-icon icon-orange">⏱</div>
+        <div class="row-info"><div class="row-label">H. sup 36e→39e (+25%)</div><div class="row-desc">17,33 h/mois — ⚡ maj. exo TEPA</div></div>
+        <div class="row-input-wrap"><input type="number" id="hSup25" value="17.33" step="0.01"><span class="unit">h</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIABLES -->
+  <div class="section">
+    <div class="section-title">Heures variables ce mois</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-icon icon-orange">🕐</div>
+        <div class="row-info"><div class="row-label">H. sup au-delà 39h (+50%)</div><div class="row-desc">⚡ majoration exonérée cotisations</div></div>
+        <div class="row-input-wrap"><input type="number" id="hSup50" value="0" min="0" step="0.5"><span class="unit">h</span></div>
+      </div>
+      <div class="row">
+        <div class="row-icon icon-purple">🌙</div>
+        <div class="row-info"><div class="row-label">Heures de nuit (+100%)</div><div class="row-desc">⚡ majoration exonérée — base soumise</div></div>
+        <div class="row-input-wrap"><input type="number" id="hNuit" value="0" min="0" step="0.5"><span class="unit">h</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIMES & FRAIS -->
+  <div class="section">
+    <div class="section-title">Primes & indemnités</div>
+    <div class="card">
+      <div class="row locked-row">
+        <div class="row-icon icon-green">🔄</div>
+        <div class="row-info"><div class="row-label">Prime polyvalence</div><div class="row-desc">Mensuelle brute fixe — soumise cotis.</div></div>
+        <div class="row-input-wrap"><input type="number" id="primePoliv" value="150"><span class="unit">€</span></div>
+      </div>
+      <div class="row locked-row">
+        <div class="row-icon icon-green">🚗</div>
+        <div class="row-info"><div class="row-label">Prime entretien véhicule</div><div class="row-desc">Mensuelle brute fixe — soumise cotis.</div></div>
+        <div class="row-input-wrap"><input type="number" id="primeVeh" value="125"><span class="unit">€</span></div>
+      </div>
+      <div class="row">
+        <div class="row-icon icon-green">🍽</div>
+        <div class="row-info"><div class="row-label">Jours travaillés (paniers)</div><div class="row-desc">15,96 € / jour — frais pro, hors cotis.</div></div>
+        <div class="row-input-wrap"><input type="number" id="nbJours" value="0" min="0" max="31"><span class="unit">j</span></div>
+      </div>
+      <div class="row">
+        <div class="row-icon icon-blue">🚘</div>
+        <div class="row-info"><div class="row-label">Frais de déplacement</div><div class="row-desc">Remboursement mensuel — hors cotis.</div></div>
+        <div class="row-input-wrap"><input type="number" id="fraisDep" value="0" min="0" step="0.01"><span class="unit">€</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABSENCES -->
+  <div class="section">
+    <div class="section-title">Absences / congés</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-icon icon-orange">🏖</div>
+        <div class="row-info"><div class="row-label">Jours d'absence non payés</div><div class="row-desc">Congés sans solde, maladie…</div></div>
+        <div class="row-input-wrap"><input type="number" id="absences" value="0" min="0" max="31"><span class="unit">j</span></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calculer()">⚡ Calculer & sauvegarder</button>
+
+  <!-- RÉSULTAT -->
+  <div class="section" id="resultSection" style="display:none">
+    <div class="section-title">Détail du calcul</div>
+    <div class="result-card" id="resultCard"></div>
+    <p class="note">⚡ Loi TEPA : majorations h.sup et h.nuit exonérées de cotisations (plafond 7 500 €/an). Cotisations salariales ~22%. Estimation indicative.</p>
+  </div>
+
+  <!-- RECAP ANNUEL -->
+  <div class="section" id="recapSection">
+    <div class="section-title">Récapitulatif annuel</div>
+    <div class="recap-grid" id="recapGrid"></div>
+    <div style="margin-top:8px" id="recapTotalWrap"></div>
+  </div>
+
+  <!-- DATA TOOLBAR -->
+  <div class="section">
+    <div class="section-title">Données</div>
+    <div class="data-toolbar">
+      <button class="btn-tool" onclick="exportJSON()"><span class="ico">💾</span> Exporter JSON</button>
+      <button class="btn-tool" onclick="document.getElementById('importFile').click()"><span class="ico">📂</span> Importer JSON</button>
+      <input type="file" id="importFile" accept=".json" onchange="importJSON(event)">
+      <button class="btn-tool" onclick="exportPDF()"><span class="ico">📄</span> Export PDF</button>
+      <button class="btn-tool danger" onclick="clearYear()"><span class="ico">🗑</span> Effacer année</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const FIELDS  = ['tauxH','hBase','hSup25','hSup50','hNuit','primePoliv','primeVeh','nbJours','fraisDep','absences'];
+const DEFAULTS = { tauxH:13, hBase:151.67, hSup25:17.33, hSup50:0, hNuit:0, primePoliv:150, primeVeh:125, nbJours:0, fraisDep:0, absences:0 };
+
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+
+// ── INIT ─────────────────────────────────────────────────────────────
+document.getElementById('yearVal').textContent = currentYear;
+document.getElementById('monthSel').value = currentMonth;
+loadMonth();
+
+// ── STORAGE KEY ──────────────────────────────────────────────────────
+function key(y, m) { return `paie_${y}_${String(m).padStart(2,'0')}`; }
+
+// ── SAVE / LOAD ───────────────────────────────────────────────────────
+function saveMonth(data) {
+  localStorage.setItem(key(currentYear, currentMonth), JSON.stringify(data));
+  showBadge();
+}
+
+function loadMonth() {
+  currentMonth = parseInt(document.getElementById('monthSel').value);
+  const raw = localStorage.getItem(key(currentYear, currentMonth));
+  const data = raw ? JSON.parse(raw) : DEFAULTS;
+  FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = data[id] ?? DEFAULTS[id];
+  });
+  // Show saved badge if data exists
+  document.getElementById('savedBadge').classList.toggle('visible', !!raw);
+  // Reset result display
+  document.getElementById('resultSection').style.display = 'none';
+  // Refresh recap
+  buildRecap();
+  // Auto-calculate if saved data exists
+  if (raw) calculer(false);
+}
+
+function getFormData() {
+  const d = {};
+  FIELDS.forEach(id => { d[id] = parseFloat(document.getElementById(id).value) || 0; });
+  return d;
+}
+
+// ── YEAR NAV ──────────────────────────────────────────────────────────
+function changeYear(delta) {
+  currentYear += delta;
+  document.getElementById('yearVal').textContent = currentYear;
+  loadMonth();
+}
+
+// ── CALC ──────────────────────────────────────────────────────────────
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function f(n)  { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function rr(label, val, cls, type) {
+  return `<div class="result-row ${type||''}"><span class="result-label">${label}</span><span class="result-val ${cls}">${val<0?'−':'+'} ${f(Math.abs(val))} €</span></div>`;
+}
+function div(label) { return `<div class="divider-row"><span class="divider-label">${label}</span></div>`; }
+
+function calculer(doSave=true) {
+  const tauxH=v('tauxH'), hBase=v('hBase'), hSup25=v('hSup25'), hSup50=v('hSup50'),
+        hNuit=v('hNuit'), primePoliv=v('primePoliv'), primeVeh=v('primeVeh'),
+        nbJours=v('nbJours'), fraisDep=v('fraisDep'), absences=v('absences');
+
+  // Soumis aux cotisations
+  const salaireBase  = hBase * tauxH;
+  const hSup25_base  = hSup25 * tauxH;
+  const hSup25_exo   = hSup25 * tauxH * 0.25;
+  const hSup50_base  = hSup50 * tauxH;
+  const hSup50_exo   = hSup50 * tauxH * 0.50;
+  const hNuit_base   = hNuit  * tauxH;
+  const hNuit_exo    = hNuit  * tauxH * 1.00;
+  const paniers      = nbJours * 15.96;
+  const hParJour     = (hBase + hSup25) / 21.67;
+  const deductAbs    = absences * hParJour * tauxH;
+
+  const brutSoumis   = salaireBase + hSup25_base + hSup50_base + hNuit_base + primePoliv + primeVeh - deductAbs;
+  const totalExo     = hSup25_exo + hSup50_exo + hNuit_exo;
+  const brutTotal    = brutSoumis + totalExo;
+  const cotisations  = brutSoumis * 0.22;
+  const totalFrais   = paniers + fraisDep;
+  const netTotal     = (brutSoumis - cotisations) + totalExo + totalFrais;
+
+  // Hero
+  document.getElementById('heroNet').innerHTML = f(netTotal) + '<span> €</span>';
+  document.getElementById('heroSub').textContent = `Net estimé — ${MONTHS[currentMonth]} ${currentYear}`;
+  document.getElementById('brutPill').textContent  = 'Brut : '    + f(brutTotal)   + ' €';
+  document.getElementById('cotPill').textContent   = 'Cotis. : '  + f(cotisations) + ' €';
+  document.getElementById('exoPill').textContent   = '⚡ TEPA : ' + f(totalExo)    + ' €';
+  document.getElementById('fraisPill').textContent = '🧾 Frais : '+ f(totalFrais)  + ' €';
+
+  // Detail
+  let html = div('Éléments soumis aux cotisations');
+  html += rr('Salaire de base ('+f(hBase)+' h × '+tauxH+' €)', salaireBase, 'pos');
+  html += rr('H. sup +25% — base ('+f(hSup25)+' h × 1×)', hSup25_base, 'pos');
+  if(hSup50>0) html += rr('H. sup +50% — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
+  if(hNuit>0)  html += rr('H. nuit — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
+  html += rr('Prime polyvalence', primePoliv, 'pos');
+  html += rr('Prime entretien véhicule', primeVeh, 'pos');
+  if(deductAbs>0) html += rr('Absence ('+absences+' j)', -deductAbs, 'neg');
+  html += `<div class="result-row subtotal"><span class="result-label" style="color:var(--text)">Sous-total brut soumis</span><span class="result-val neu">${f(brutSoumis)} €</span></div>`;
+  html += rr('Cotisations salariales (~22%)', -cotisations, 'neg');
+
+  if(totalExo>0) {
+    html += div('⚡ Exonérations loi TEPA');
+    html += rr('H. sup +25% — majoration (+0,25×)', hSup25_exo, 'pos', 'exo');
+    if(hSup50>0) html += rr('H. sup +50% — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
+    if(hNuit>0)  html += rr('H. nuit — majoration (+100%)', hNuit_exo, 'pos', 'exo');
+  }
+
+  if(totalFrais>0) {
+    html += div('Frais professionnels (hors cotisations)');
+    if(paniers>0)  html += rr('Paniers repas ('+nbJours+' j × 15,96 €)', paniers, 'pos');
+    if(fraisDep>0) html += rr('Frais de déplacement', fraisDep, 'pos');
+  }
+
+  html += `<div class="result-row total"><span class="result-label" style="color:var(--text);font-weight:600;font-size:14px">🟢 NET À PAYER</span><span class="result-val big">${f(netTotal)} €</span></div>`;
+  document.getElementById('resultCard').innerHTML = html;
+  document.getElementById('resultSection').style.display = 'block';
+
+  // Save
+  if (doSave) {
+    const data = getFormData();
+    data._net = netTotal;
+    data._brut = brutTotal;
+    saveMonth(data);
+    buildRecap();
+    toast('✓ Sauvegardé pour ' + MONTHS[currentMonth]);
+    setTimeout(() => document.getElementById('resultSection').scrollIntoView({behavior:'smooth'}), 50);
+  }
+}
+
+// ── RECAP ─────────────────────────────────────────────────────────────
+function buildRecap() {
+  const grid = document.getElementById('recapGrid');
+  const totalWrap = document.getElementById('recapTotalWrap');
+  let totalNet = 0; let hasAny = false;
+  let html = '';
+  for (let m = 0; m < 12; m++) {
+    const raw = localStorage.getItem(key(currentYear, m));
+    const isActive = m === currentMonth;
+    if (raw) {
+      const d = JSON.parse(raw);
+      const net = d._net || 0;
+      totalNet += net; hasAny = true;
+      html += `<div class="recap-month ${isActive?'active':''} has-data" onclick="jumpToMonth(${m})">
+        <div class="recap-month-name">${MONTHS[m]}</div>
+        <div class="recap-month-net has-data">${f(net)} €</div>
+      </div>`;
+    } else {
+      html += `<div class="recap-month empty ${isActive?'active':''}" onclick="jumpToMonth(${m})">
+        <div class="recap-month-name">${MONTHS[m]}</div>
+        <div class="recap-month-net">—</div>
+      </div>`;
+    }
+  }
+  grid.innerHTML = html;
+  totalWrap.innerHTML = hasAny
+    ? `<div class="recap-total"><span class="recap-total-label">Total net ${currentYear}</span><span class="recap-total-val">${f(totalNet)} €</span></div>`
+    : '';
+}
+
+function jumpToMonth(m) {
+  document.getElementById('monthSel').value = m;
+  loadMonth();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── EXPORT JSON ───────────────────────────────────────────────────────
+function exportJSON() {
+  const allData = {};
+  for (let m = 0; m < 12; m++) {
+    const raw = localStorage.getItem(key(currentYear, m));
+    if (raw) allData[MONTHS[m]] = JSON.parse(raw);
+  }
+  if (!Object.keys(allData).length) { toast('⚠ Aucune donnée à exporter pour ' + currentYear); return; }
+  const blob = new Blob([JSON.stringify({année: currentYear, données: allData}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ma-paie-${currentYear}.json`;
+  a.click();
+  toast('💾 Export JSON téléchargé');
+}
+
+// ── IMPORT JSON ───────────────────────────────────────────────────────
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const année = parsed.année;
+      const données = parsed.données;
+      let count = 0;
+      MONTHS.forEach((name, idx) => {
+        if (données[name]) {
+          localStorage.setItem(key(année, idx), JSON.stringify(données[name]));
+          count++;
+        }
+      });
+      currentYear = année;
+      document.getElementById('yearVal').textContent = currentYear;
+      loadMonth();
+      toast(`✅ ${count} mois importés pour ${année}`);
+    } catch(err) {
+      toast('❌ Fichier invalide');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ── EXPORT PDF ────────────────────────────────────────────────────────
+function exportPDF() {
+  const raw = localStorage.getItem(key(currentYear, currentMonth));
+  if (!raw) { toast('⚠ Calcule d\'abord ce mois'); return; }
+  const d = JSON.parse(raw);
+
+  // Build a clean print page
+  const months = MONTHS;
+  let recap = '';
+  let totalNet = 0;
+  for (let m = 0; m < 12; m++) {
+    const r = localStorage.getItem(key(currentYear, m));
+    if (r) {
+      const md = JSON.parse(r);
+      totalNet += md._net || 0;
+      recap += `<tr><td>${months[m]}</td><td style="text-align:right">${(md._net||0).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td><td style="text-align:right">${(md._brut||0).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>`;
+    }
+  }
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Fiche de Paie — ${months[currentMonth]} ${currentYear}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a2e;padding:30px;max-width:700px;margin:0 auto;}
+    h1{font-size:22px;margin-bottom:4px;} .sub{color:#666;margin-bottom:24px;font-size:13px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+    th{background:#0a0f1e;color:#fff;padding:8px 12px;text-align:left;font-size:12px;}
+    td{padding:7px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;}
+    .section-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#666;margin:18px 0 6px;}
+    .total-row td{font-weight:bold;background:#f0f9ff;font-size:13px;}
+    .net-box{background:#0a0f1e;color:#fff;border-radius:10px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+    .net-box .label{font-size:12px;opacity:.7;}
+    .net-box .val{font-size:24px;font-weight:bold;color:#00d4ff;}
+    .footer{font-size:10px;color:#aaa;text-align:center;margin-top:30px;border-top:1px solid #eee;padding-top:10px;}
+    @media print{body{padding:10px;}}
+  </style></head><body>
+  <h1>Fiche de Paie Estimée</h1>
+  <div class="sub">${months[currentMonth]} ${currentYear} — Généré le ${new Date().toLocaleDateString('fr-FR')}</div>
+  <div class="net-box"><div><div class="label">NET À PAYER ESTIMÉ</div><div class="val">${(d._net||0).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</div></div><div style="text-align:right"><div class="label">Brut total</div><div style="font-size:15px;color:#7cf5a2">${(d._brut||0).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</div></div></div>
+  <div class="section-title">Détail du mois</div>
+  <table><thead><tr><th>Élément</th><th style="text-align:right">Montant</th></tr></thead><tbody>
+  <tr><td>Taux horaire</td><td style="text-align:right">${d.tauxH} €/h</td></tr>
+  <tr><td>Heures de base (35h)</td><td style="text-align:right">${d.hBase} h</td></tr>
+  <tr><td>H. sup +25% (36e-39e)</td><td style="text-align:right">${d.hSup25} h</td></tr>
+  <tr><td>H. sup +50% (au-delà 39h)</td><td style="text-align:right">${d.hSup50} h</td></tr>
+  <tr><td>Heures de nuit (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
+  <tr><td>Prime polyvalence</td><td style="text-align:right">${d.primePoliv} €</td></tr>
+  <tr><td>Prime entretien véhicule</td><td style="text-align:right">${d.primeVeh} €</td></tr>
+  <tr><td>Paniers repas (${d.nbJours} j × 15,96 €)</td><td style="text-align:right">${(d.nbJours*15.96).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>
+  <tr><td>Frais de déplacement</td><td style="text-align:right">${d.fraisDep} €</td></tr>
+  <tr><td>Absences</td><td style="text-align:right">${d.absences} j</td></tr>
+  </tbody></table>
+  ${recap ? `<div class="section-title">Récapitulatif ${currentYear}</div>
+  <table><thead><tr><th>Mois</th><th style="text-align:right">Net</th><th style="text-align:right">Brut</th></tr></thead><tbody>
+  ${recap}
+  <tr class="total-row"><td>TOTAL ${currentYear}</td><td style="text-align:right">${totalNet.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td><td></td></tr>
+  </tbody></table>` : ''}
+  <div class="footer">Estimation indicative — Loi TEPA appliquée — Cotisations salariales ~22%<br>Se référer à la fiche de paie officielle de l'employeur.</div>
+  </body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
+}
+
+// ── CLEAR YEAR ────────────────────────────────────────────────────────
+function clearYear() {
+  if (!confirm(`Effacer toutes les données ${currentYear} ?`)) return;
+  for (let m = 0; m < 12; m++) localStorage.removeItem(key(currentYear, m));
+  loadMonth();
+  document.getElementById('resultSection').style.display = 'none';
+  toast('🗑 Données ' + currentYear + ' effacées');
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────
+function showBadge() {
+  document.getElementById('savedBadge').classList.add('visible');
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// Auto-recalc on input change if result is visible
+document.querySelectorAll('input[type=number]').forEach(inp => {
+  inp.addEventListener('input', () => {
+    if (document.getElementById('resultSection').style.display !== 'none') calculer();
+  });
+});
+
+// PWA install
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('visible');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const {outcome} = await deferredPrompt.userChoice;
+  if (outcome==='accepted') document.getElementById('installBanner').classList.remove('visible');
+  deferredPrompt = null;
+});
+</script>
+</body>
+</html>
