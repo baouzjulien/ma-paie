@@ -1,0 +1,25 @@
+{
+  "name": "Ma Fiche de Paie",
+  "short_name": "Ma Paie",
+  "description": "Calcul estimé de fiche de paie mensuelle",
+  "start_url": "/ma-paie/",
+  "scope": "/ma-paie/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f1e",
+  "theme_color": "#0a0f1e",
+  "icons": [
+    {
+      "src": "/ma-paie/HR-icon.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ma-paie/HR-icon.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+} 
