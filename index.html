@@ -69,7 +69,7 @@
   input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
   input:focus{border-color:var(--accent);}
   .unit{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
-  .locked-row .row-input-wrap{opacity:.4;pointer-events:none;}
+  /* locked-row supprimé — tous les champs sont modifiables */
 
   /* BUTTONS */
   .btn-calc{display:block;width:calc(100% - 32px);margin:0 16px 14px;background:var(--accent);color:var(--bg);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border:none;border-radius:14px;padding:16px;cursor:pointer;transition:all .2s;box-shadow:0 0 30px rgba(0,212,255,.2);}
@@ -171,21 +171,21 @@
 
   <!-- BASE -->
   <div class="section">
-    <div class="section-title">Base contractuelle (fixe)</div>
+    <div class="section-title">Base contractuelle</div>
     <div class="card">
-      <div class="row locked-row">
+      <div class="row">
         <div class="row-icon icon-blue">💶</div>
-        <div class="row-info"><div class="row-label">Taux horaire brut</div><div class="row-desc">13 € / heure</div></div>
+        <div class="row-info"><div class="row-label">Taux horaire brut</div><div class="row-desc">Modifiable — sauvegardé comme défaut</div></div>
         <div class="row-input-wrap"><input type="number" id="tauxH" value="13" step="0.01"><span class="unit">€/h</span></div>
       </div>
-      <div class="row locked-row">
+      <div class="row">
         <div class="row-icon icon-blue">📅</div>
-        <div class="row-info"><div class="row-label">Heures base (35h)</div><div class="row-desc">151,67 h/mois</div></div>
+        <div class="row-info"><div class="row-label">Heures base (35h)</div><div class="row-desc">Modifiable — sauvegardé comme défaut</div></div>
         <div class="row-input-wrap"><input type="number" id="hBase" value="151.67" step="0.01"><span class="unit">h</span></div>
       </div>
-      <div class="row locked-row">
+      <div class="row">
         <div class="row-icon icon-orange">⏱</div>
-        <div class="row-info"><div class="row-label">H. sup 36e→39e (+25%)</div><div class="row-desc">17,33 h/mois — ⚡ maj. exo TEPA</div></div>
+        <div class="row-info"><div class="row-label">H. sup 36e→39e (+25%)</div><div class="row-desc">⚡ maj. exo TEPA — modifiable</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup25" value="17.33" step="0.01"><span class="unit">h</span></div>
       </div>
     </div>
@@ -212,14 +212,14 @@
   <div class="section">
     <div class="section-title">Primes & indemnités</div>
     <div class="card">
-      <div class="row locked-row">
+      <div class="row">
         <div class="row-icon icon-green">🔄</div>
-        <div class="row-info"><div class="row-label">Prime polyvalence</div><div class="row-desc">Mensuelle brute fixe — soumise cotis.</div></div>
+        <div class="row-info"><div class="row-label">Prime polyvalence</div><div class="row-desc">Soumise cotis. — modifiable</div></div>
         <div class="row-input-wrap"><input type="number" id="primePoliv" value="150"><span class="unit">€</span></div>
       </div>
-      <div class="row locked-row">
+      <div class="row">
         <div class="row-icon icon-green">🚗</div>
-        <div class="row-info"><div class="row-label">Prime entretien véhicule</div><div class="row-desc">Mensuelle brute fixe — soumise cotis.</div></div>
+        <div class="row-info"><div class="row-label">Prime entretien véhicule</div><div class="row-desc">Soumise cotis. — modifiable</div></div>
         <div class="row-input-wrap"><input type="number" id="primeVeh" value="125"><span class="unit">€</span></div>
       </div>
       <div class="row">
@@ -306,10 +306,13 @@ function saveMonth(data) {
 function loadMonth() {
   currentMonth = parseInt(document.getElementById('monthSel').value);
   const raw = localStorage.getItem(key(currentYear, currentMonth));
-  const data = raw ? JSON.parse(raw) : DEFAULTS;
+  // Si pas de données pour ce mois, utiliser les défauts sauvegardés (ou DEFAULTS)
+  const savedDefaults = localStorage.getItem('paie_defaults');
+  const baseDefaults = savedDefaults ? {...DEFAULTS, ...JSON.parse(savedDefaults)} : DEFAULTS;
+  const data = raw ? JSON.parse(raw) : baseDefaults;
   FIELDS.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.value = data[id] ?? DEFAULTS[id];
+    if (el) el.value = data[id] ?? baseDefaults[id];
   });
   // Show saved badge if data exists
   document.getElementById('savedBadge').classList.toggle('visible', !!raw);
@@ -403,8 +406,14 @@ function calculer(doSave=true) {
   document.getElementById('resultCard').innerHTML = html;
   document.getElementById('resultSection').style.display = 'block';
 
-  // Save
+  // Save defaults (base fields) so next months use updated values
   if (doSave) {
+    const defaults = {
+      tauxH: v('tauxH'), hBase: v('hBase'), hSup25: v('hSup25'),
+      primePoliv: v('primePoliv'), primeVeh: v('primeVeh')
+    };
+    localStorage.setItem('paie_defaults', JSON.stringify(defaults));
+
     const data = getFormData();
     data._net = netTotal;
     data._brut = brutTotal;
