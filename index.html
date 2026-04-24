@@ -420,7 +420,7 @@ function calculer(doSave=true) {
     saveMonth(data);
     buildRecap();
     toast('✓ Sauvegardé pour ' + MONTHS[currentMonth]);
-    setTimeout(() => document.getElementById('resultSection').scrollIntoView({behavior:'smooth'}), 50);
+    // Pas de scroll automatique — l'utilisateur fait défiler lui-même
   }
 }
 
@@ -589,12 +589,11 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-// Auto-recalc on input change if result is visible
+// Sélectionner tout le contenu au focus (évite le curseur à gauche)
 document.querySelectorAll('input[type=number]').forEach(inp => {
-  inp.addEventListener('input', () => {
-    if (document.getElementById('resultSection').style.display !== 'none') calculer();
-  });
+  inp.addEventListener('focus', () => inp.select());
 });
+// Plus de recalcul automatique sur changement — l'utilisateur clique sur le bouton
 
 // PWA install
 let deferredPrompt;
