@@ -258,7 +258,7 @@
   <div class="section" id="resultSection" style="display:none">
     <div class="section-title">Détail du calcul</div>
     <div class="result-card" id="resultCard"></div>
-    <p class="note">⚡ Loi TEPA : majorations h.sup et h.nuit exonérées de cotisations (plafond 7 500 €/an). Cotisations salariales ~22%. Estimation indicative.</p>
+    <p class="note">⚡ Loi TEPA : majorations h.sup et h.nuit exonérées + réduction cotisations salariales HS 11,31% (plafond 7 500 €/an). Cotisations salariales ~22%. Estimation indicative.</p>
   </div>
 
   <!-- RECAP ANNUEL -->
@@ -290,6 +290,7 @@
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const FIELDS  = ['tauxH','hBase','hSup25','hSup25Var','hSup50','hNuit','primePoliv','primeVeh','nbJours','fraisDep','absences'];
 const DEFAULTS = { tauxH:13, hBase:151.67, hSup25:17.33, hSup25Var:0, hSup50:0, hNuit:0, primePoliv:150, primeVeh:125, nbJours:0, fraisDep:0, absences:0 };
+const HS_REDUCTION_RATE = 0.1131;
 
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
@@ -365,6 +366,8 @@ function calculer(doSave=true) {
   const hSup50_exo   = hSup50 * tauxH * 0.50;
   const hNuit_base   = hNuit  * tauxH;
   const hNuit_exo    = hNuit  * tauxH * 1.00;
+  const hSupRemun    = hSup25_base + hSup25_exo + hSup50_base + hSup50_exo;
+  const reducHs      = hSupRemun * HS_REDUCTION_RATE;
   const paniers      = nbJours * 15.96;
   const hParJour     = (hBase + hSup25) / 21.67;
   const deductAbs    = absences * hParJour * tauxH;
@@ -372,7 +375,7 @@ function calculer(doSave=true) {
   const brutSoumis   = salaireBase + hSup25_base + hSup50_base + hNuit_base + primePoliv + primeVeh - deductAbs;
   const totalExo     = hSup25_exo + hSup50_exo + hNuit_exo;
   const brutTotal    = brutSoumis + totalExo;
-  const cotisations  = brutSoumis * 0.22;
+  const cotisations  = Math.max(brutSoumis * 0.22 - reducHs, 0);
   const totalFrais   = paniers + fraisDep;
   const netTotal     = (brutSoumis - cotisations) + totalExo + totalFrais;
 
@@ -381,7 +384,7 @@ function calculer(doSave=true) {
   document.getElementById('heroSub').textContent = `Net estimé — ${MONTHS[currentMonth]} ${currentYear}`;
   document.getElementById('brutPill').textContent  = 'Brut : '    + f(brutTotal)   + ' €';
   document.getElementById('cotPill').textContent   = 'Cotis. : '  + f(cotisations) + ' €';
-  document.getElementById('exoPill').textContent   = '⚡ TEPA : ' + f(totalExo)    + ' €';
+  document.getElementById('exoPill').textContent   = '⚡ TEPA : ' + f(totalExo + reducHs)    + ' €';
   document.getElementById('fraisPill').textContent = '🧾 Frais : '+ f(totalFrais)  + ' €';
 
   // Detail
@@ -395,7 +398,7 @@ function calculer(doSave=true) {
   html += rr('Prime entretien véhicule', primeVeh, 'pos');
   if(deductAbs>0) html += rr('Absence ('+absences+' j)', -deductAbs, 'neg');
   html += `<div class="result-row subtotal"><span class="result-label" style="color:var(--text)">Sous-total brut soumis</span><span class="result-val neu">${f(brutSoumis)} €</span></div>`;
-  html += rr('Cotisations salariales (~22%)', -cotisations, 'neg');
+  html += rr('Cotisations salariales (~22%, après réduction HS)', -cotisations, 'neg');
 
   if(totalExo>0) {
     html += div('⚡ Exonérations loi TEPA');
@@ -403,6 +406,7 @@ function calculer(doSave=true) {
     if(hSup25Extra>0) html += rr('H. sup +25% à ajouter — majoration (+0,25×)', hSup25Extra * tauxH * 0.25, 'pos', 'exo');
     if(hSup50>0) html += rr('H. sup +50% — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
     if(hNuit>0)  html += rr('H. nuit — majoration (+100%)', hNuit_exo, 'pos', 'exo');
+    if(reducHs>0) html += rr('Réduction cotisations salariales HS (11,31%)', reducHs, 'pos', 'exo');
   }
 
   if(totalFrais>0) {
