@@ -185,7 +185,7 @@
       </div>
       <div class="row">
         <div class="row-icon icon-orange">⏱</div>
-        <div class="row-info"><div class="row-label">H. sup 36e→39e (+25%)</div><div class="row-desc">⚡ maj. exo TEPA — modifiable</div></div>
+        <div class="row-info"><div class="row-label">H. sup contrat (+25%)</div><div class="row-desc">⚡ 17,33 h mensualisées — modifiable</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup25" value="17.33" step="0.01"><span class="unit">h</span></div>
       </div>
     </div>
@@ -196,8 +196,13 @@
     <div class="section-title">Heures variables ce mois</div>
     <div class="card">
       <div class="row">
+        <div class="row-icon icon-orange">⏱</div>
+        <div class="row-info"><div class="row-label">Total fiche RH +25%</div><div class="row-desc">⚡ l'app déduit les 17,33 h contrat</div></div>
+        <div class="row-input-wrap"><input type="number" id="hSup25Var" value="0" min="0" step="0.5"><span class="unit">h</span></div>
+      </div>
+      <div class="row">
         <div class="row-icon icon-orange">🕐</div>
-        <div class="row-info"><div class="row-label">H. sup au-delà 39h (+50%)</div><div class="row-desc">⚡ majoration exonérée cotisations</div></div>
+        <div class="row-info"><div class="row-label">H. sup au-delà 43h (+50%)</div><div class="row-desc">⚡ majoration exonérée cotisations</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup50" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
@@ -283,8 +288,8 @@
 <script>
 // ── STATE ────────────────────────────────────────────────────────────
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const FIELDS  = ['tauxH','hBase','hSup25','hSup50','hNuit','primePoliv','primeVeh','nbJours','fraisDep','absences'];
-const DEFAULTS = { tauxH:13, hBase:151.67, hSup25:17.33, hSup50:0, hNuit:0, primePoliv:150, primeVeh:125, nbJours:0, fraisDep:0, absences:0 };
+const FIELDS  = ['tauxH','hBase','hSup25','hSup25Var','hSup50','hNuit','primePoliv','primeVeh','nbJours','fraisDep','absences'];
+const DEFAULTS = { tauxH:13, hBase:151.67, hSup25:17.33, hSup25Var:0, hSup50:0, hNuit:0, primePoliv:150, primeVeh:125, nbJours:0, fraisDep:0, absences:0 };
 
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
@@ -346,14 +351,16 @@ function rr(label, val, cls, type) {
 function div(label) { return `<div class="divider-row"><span class="divider-label">${label}</span></div>`; }
 
 function calculer(doSave=true) {
-  const tauxH=v('tauxH'), hBase=v('hBase'), hSup25=v('hSup25'), hSup50=v('hSup50'),
+  const tauxH=v('tauxH'), hBase=v('hBase'), hSup25=v('hSup25'), hSup25Rh=v('hSup25Var'), hSup50=v('hSup50'),
         hNuit=v('hNuit'), primePoliv=v('primePoliv'), primeVeh=v('primeVeh'),
         nbJours=v('nbJours'), fraisDep=v('fraisDep'), absences=v('absences');
 
   // Soumis aux cotisations
   const salaireBase  = hBase * tauxH;
-  const hSup25_base  = hSup25 * tauxH;
-  const hSup25_exo   = hSup25 * tauxH * 0.25;
+  const hSup25Extra  = Math.max(hSup25Rh - hSup25, 0);
+  const hSup25Total  = hSup25 + hSup25Extra;
+  const hSup25_base  = hSup25Total * tauxH;
+  const hSup25_exo   = hSup25Total * tauxH * 0.25;
   const hSup50_base  = hSup50 * tauxH;
   const hSup50_exo   = hSup50 * tauxH * 0.50;
   const hNuit_base   = hNuit  * tauxH;
@@ -380,7 +387,8 @@ function calculer(doSave=true) {
   // Detail
   let html = div('Éléments soumis aux cotisations');
   html += rr('Salaire de base ('+f(hBase)+' h × '+tauxH+' €)', salaireBase, 'pos');
-  html += rr('H. sup +25% — base ('+f(hSup25)+' h × 1×)', hSup25_base, 'pos');
+  if(hSup25>0) html += rr('H. sup contrat +25% — base ('+f(hSup25)+' h × 1×)', hSup25 * tauxH, 'pos');
+  if(hSup25Extra>0) html += rr('H. sup +25% à ajouter — base ('+f(hSup25Extra)+' h × 1×)', hSup25Extra * tauxH, 'pos');
   if(hSup50>0) html += rr('H. sup +50% — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
   if(hNuit>0)  html += rr('H. nuit — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
   html += rr('Prime polyvalence', primePoliv, 'pos');
@@ -391,7 +399,8 @@ function calculer(doSave=true) {
 
   if(totalExo>0) {
     html += div('⚡ Exonérations loi TEPA');
-    html += rr('H. sup +25% — majoration (+0,25×)', hSup25_exo, 'pos', 'exo');
+    if(hSup25>0) html += rr('H. sup contrat +25% — majoration (+0,25×)', hSup25 * tauxH * 0.25, 'pos', 'exo');
+    if(hSup25Extra>0) html += rr('H. sup +25% à ajouter — majoration (+0,25×)', hSup25Extra * tauxH * 0.25, 'pos', 'exo');
     if(hSup50>0) html += rr('H. sup +50% — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
     if(hNuit>0)  html += rr('H. nuit — majoration (+100%)', hNuit_exo, 'pos', 'exo');
   }
@@ -451,7 +460,7 @@ function buildRecap() {
   grid.innerHTML = html;
   totalWrap.innerHTML = hasAny
     ? `<div class="recap-total"><span class="recap-total-label">Total net ${currentYear}</span><span class="recap-total-val">${f(totalNet)} €</span></div>`
-    : '';
+    : `<div class="recap-total"><span class="recap-total-label">Aucun mois sauvegardé</span><span class="recap-total-val">—</span></div>`;
 }
 
 function jumpToMonth(m) {
@@ -548,8 +557,9 @@ function exportPDF() {
   <table><thead><tr><th>Élément</th><th style="text-align:right">Montant</th></tr></thead><tbody>
   <tr><td>Taux horaire</td><td style="text-align:right">${d.tauxH} €/h</td></tr>
   <tr><td>Heures de base (35h)</td><td style="text-align:right">${d.hBase} h</td></tr>
-  <tr><td>H. sup +25% (36e-39e)</td><td style="text-align:right">${d.hSup25} h</td></tr>
-  <tr><td>H. sup +50% (au-delà 39h)</td><td style="text-align:right">${d.hSup50} h</td></tr>
+  <tr><td>H. sup contrat +25%</td><td style="text-align:right">${d.hSup25} h</td></tr>
+  <tr><td>Total fiche RH +25%</td><td style="text-align:right">${d.hSup25Var || 0} h</td></tr>
+  <tr><td>H. sup +50% (au-delà 43h)</td><td style="text-align:right">${d.hSup50} h</td></tr>
   <tr><td>Heures de nuit (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
   <tr><td>Prime polyvalence</td><td style="text-align:right">${d.primePoliv} €</td></tr>
   <tr><td>Prime entretien véhicule</td><td style="text-align:right">${d.primeVeh} €</td></tr>
