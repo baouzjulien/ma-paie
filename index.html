@@ -111,6 +111,8 @@
   .divider-row{padding:5px 16px;background:rgba(0,212,255,.03);border-bottom:1px solid var(--border);}
   .divider-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);opacity:.7;}
   .note{font-size:11px;color:var(--muted);padding:10px 16px;text-align:center;line-height:1.5;}
+  .field-note{font-size:11px;color:var(--muted);line-height:1.45;padding:10px 14px;background:rgba(0,212,255,.04);border-bottom:1px solid var(--border);}
+  .field-note strong{color:var(--accent);font-weight:500;}
 
   /* TOAST */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;color:var(--text);transition:transform .3s ease;z-index:999;white-space:nowrap;}
@@ -193,26 +195,27 @@
 
   <!-- VARIABLES -->
   <div class="section">
-    <div class="section-title">Heures variables ce mois</div>
+    <div class="section-title">Récapitulatif RH - variables</div>
     <div class="card">
+      <div class="field-note"><strong>Saisie depuis le récap RH.</strong> Les repas peuvent couvrir plus de semaines que les heures variables : recopie chaque total tel qu'il apparaît en bas du relevé RH.</div>
       <div class="row">
         <div class="row-icon icon-orange">⏱</div>
-        <div class="row-info"><div class="row-label">Total fiche RH +25%</div><div class="row-desc">⚡ l'app déduit les 17,33 h contrat</div></div>
+        <div class="row-info"><div class="row-label">HS 25% RH</div><div class="row-desc">L'app déduit automatiquement les 17,33 h contrat</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup25Var" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-orange">🕐</div>
-        <div class="row-info"><div class="row-label">H. sup au-delà 43h (+50%)</div><div class="row-desc">⚡ majoration exonérée cotisations</div></div>
+        <div class="row-info"><div class="row-label">HS 50% RH</div><div class="row-desc">Ligne HS 50% du récapitulatif RH</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup50" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-blue">⏱</div>
-        <div class="row-info"><div class="row-label">Complément d'heures</div><div class="row-desc">Payé au taux normal, sans majoration</div></div>
+        <div class="row-info"><div class="row-label">HS non majorées RH</div><div class="row-desc">Payées au taux normal, sans majoration</div></div>
         <div class="row-input-wrap"><input type="number" id="compHeures" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-purple">🌙</div>
-        <div class="row-info"><div class="row-label">Heures de nuit (+100%)</div><div class="row-desc">⚡ majoration exonérée — base soumise</div></div>
+        <div class="row-info"><div class="row-label">Nuit RH (+100%)</div><div class="row-desc">Ligne Nuit du récapitulatif RH</div></div>
         <div class="row-input-wrap"><input type="number" id="hNuit" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
     </div>
@@ -239,7 +242,7 @@
       </div>
       <div class="row">
         <div class="row-icon icon-green">🍽</div>
-        <div class="row-info"><div class="row-label">Jours travaillés (paniers)</div><div class="row-desc">15,96 € / jour — frais pro, hors cotis.</div></div>
+        <div class="row-info"><div class="row-label">Repas RH (paniers)</div><div class="row-desc">Total repas du relevé RH, même si les variables sont arrêtées plus tôt</div></div>
         <div class="row-input-wrap"><input type="number" id="nbJours" value="0" min="0" max="31"><span class="unit">j</span></div>
       </div>
       <div class="row">
@@ -373,6 +376,9 @@ function rr(label, val, cls, type) {
   return `<div class="result-row ${type||''}"><span class="result-label">${label}</span><span class="result-val ${cls}">${val<0?'−':'+'} ${f(Math.abs(val))} €</span></div>`;
 }
 function div(label) { return `<div class="divider-row"><span class="divider-label">${label}</span></div>`; }
+function infoRow(label, value) {
+  return `<div class="result-row subtotal"><span class="result-label">${label}</span><span class="result-val neu">${value}</span></div>`;
+}
 
 function calculer(doSave=true) {
   const tauxH=v('tauxH'), hBase=v('hBase'), hSup25=v('hSup25'), hSup25Rh=v('hSup25Var'), hSup50=v('hSup50'),
@@ -428,10 +434,11 @@ function calculer(doSave=true) {
   let html = div('Éléments soumis aux cotisations');
   html += rr('Salaire de base ('+f(hBase)+' h × '+tauxH+' €)', salaireBase, 'pos');
   if(hSup25>0) html += rr('H. sup contrat +25% — base ('+f(hSup25)+' h × 1×)', hSup25 * tauxH, 'pos');
-  if(hSup25Extra>0) html += rr('H. sup +25% à ajouter — base ('+f(hSup25Extra)+' h × 1×)', hSup25Extra * tauxH, 'pos');
-  if(hSup50>0) html += rr('H. sup +50% — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
-  if(compHeures>0) html += rr('Complément d\'heures ('+f(compHeures)+' h × 1×)', compHeures_base, 'pos');
-  if(hNuit>0)  html += rr('H. nuit — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
+  if(hSup25Rh>0) html += infoRow('HS 25% RH saisis', f(hSup25Rh)+' h → variable après contrat : '+f(hSup25Extra)+' h');
+  if(hSup25Extra>0) html += rr('HS 25% RH à ajouter — base ('+f(hSup25Extra)+' h × 1×)', hSup25Extra * tauxH, 'pos');
+  if(hSup50>0) html += rr('HS 50% RH — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
+  if(compHeures>0) html += rr('HS non majorées RH ('+f(compHeures)+' h × 1×)', compHeures_base, 'pos');
+  if(hNuit>0)  html += rr('Nuit RH — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
   html += rr('Prime polyvalence', primePoliv, 'pos');
   html += rr('Prime entretien assiduité', primeVeh, 'pos');
   html += rr('Prime téléphone', primeTel, 'pos');
@@ -442,9 +449,9 @@ function calculer(doSave=true) {
   if(totalExo>0) {
     html += div('⚡ Exonérations loi TEPA');
     if(hSup25>0) html += rr('H. sup contrat +25% — majoration (+0,25×)', hSup25 * tauxH * 0.25, 'pos', 'exo');
-    if(hSup25Extra>0) html += rr('H. sup +25% à ajouter — majoration (+0,25×)', hSup25Extra * tauxH * 0.25, 'pos', 'exo');
-    if(hSup50>0) html += rr('H. sup +50% — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
-    if(hNuit>0)  html += rr('H. nuit — majoration (+100%)', hNuit_exo, 'pos', 'exo');
+    if(hSup25Extra>0) html += rr('HS 25% RH à ajouter — majoration (+0,25×)', hSup25Extra * tauxH * 0.25, 'pos', 'exo');
+    if(hSup50>0) html += rr('HS 50% RH — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
+    if(hNuit>0)  html += rr('Nuit RH — majoration (+100%)', hNuit_exo, 'pos', 'exo');
     if(reducHs>0) html += rr('Réduction cotisations salariales HS (11,31%)', reducHs, 'pos', 'exo');
   }
 
@@ -601,14 +608,14 @@ function exportPDF() {
   <tr><td>Taux horaire</td><td style="text-align:right">${d.tauxH} €/h</td></tr>
   <tr><td>Heures de base (35h)</td><td style="text-align:right">${d.hBase} h</td></tr>
   <tr><td>H. sup contrat +25%</td><td style="text-align:right">${d.hSup25} h</td></tr>
-  <tr><td>Total fiche RH +25%</td><td style="text-align:right">${d.hSup25Var || 0} h</td></tr>
-  <tr><td>H. sup +50% (au-delà 43h)</td><td style="text-align:right">${d.hSup50} h</td></tr>
-  <tr><td>Complément d'heures</td><td style="text-align:right">${d.compHeures || 0} h</td></tr>
-  <tr><td>Heures de nuit (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
+  <tr><td>HS 25% RH</td><td style="text-align:right">${d.hSup25Var || 0} h</td></tr>
+  <tr><td>HS 50% RH</td><td style="text-align:right">${d.hSup50} h</td></tr>
+  <tr><td>HS non majorées RH</td><td style="text-align:right">${d.compHeures || 0} h</td></tr>
+  <tr><td>Nuit RH (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
   <tr><td>Prime polyvalence</td><td style="text-align:right">${d.primePoliv} €</td></tr>
   <tr><td>Prime entretien assiduité</td><td style="text-align:right">${d.primeVeh} €</td></tr>
   <tr><td>Prime téléphone</td><td style="text-align:right">${d.primeTel || 0} €</td></tr>
-  <tr><td>Paniers repas (${d.nbJours} j × 15,96 €)</td><td style="text-align:right">${(d.nbJours*15.96).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>
+  <tr><td>Repas RH / paniers (${d.nbJours} j × 15,96 €)</td><td style="text-align:right">${(d.nbJours*15.96).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>
   <tr><td>Frais de déplacement</td><td style="text-align:right">${d.fraisDep} €</td></tr>
   <tr><td>Absences</td><td style="text-align:right">${d.absences} j</td></tr>
   </tbody></table>
