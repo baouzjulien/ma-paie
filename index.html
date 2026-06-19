@@ -206,6 +206,11 @@
         <div class="row-input-wrap"><input type="number" id="hSup50" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
+        <div class="row-icon icon-blue">⏱</div>
+        <div class="row-info"><div class="row-label">Complément d'heures</div><div class="row-desc">Payé au taux normal, sans majoration</div></div>
+        <div class="row-input-wrap"><input type="number" id="compHeures" value="0" min="0" step="0.5"><span class="unit">h</span></div>
+      </div>
+      <div class="row">
         <div class="row-icon icon-purple">🌙</div>
         <div class="row-info"><div class="row-label">Heures de nuit (+100%)</div><div class="row-desc">⚡ majoration exonérée — base soumise</div></div>
         <div class="row-input-wrap"><input type="number" id="hNuit" value="0" min="0" step="0.5"><span class="unit">h</span></div>
@@ -224,8 +229,13 @@
       </div>
       <div class="row">
         <div class="row-icon icon-green">🚗</div>
-        <div class="row-info"><div class="row-label">Prime entretien véhicule</div><div class="row-desc">Soumise cotis. — modifiable</div></div>
-        <div class="row-input-wrap"><input type="number" id="primeVeh" value="125"><span class="unit">€</span></div>
+        <div class="row-info"><div class="row-label">Prime entretien assiduité</div><div class="row-desc">Soumise cotis. — modifiable</div></div>
+        <div class="row-input-wrap"><input type="number" id="primeVeh" value="120"><span class="unit">€</span></div>
+      </div>
+      <div class="row">
+        <div class="row-icon icon-green">☎</div>
+        <div class="row-info"><div class="row-label">Prime téléphone</div><div class="row-desc">Soumise cotis. — bulletin de paie</div></div>
+        <div class="row-input-wrap"><input type="number" id="primeTel" value="15"><span class="unit">€</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-green">🍽</div>
@@ -258,7 +268,7 @@
   <div class="section" id="resultSection" style="display:none">
     <div class="section-title">Détail du calcul</div>
     <div class="result-card" id="resultCard"></div>
-    <p class="note">⚡ Loi TEPA : majorations h.sup et h.nuit exonérées + réduction cotisations salariales HS 11,31% (plafond 7 500 €/an). Cotisations salariales ~22%. Estimation indicative.</p>
+    <p class="note">⚡ Estimation calée sur les lignes du bulletin HR : réduction HS 11,31%, CSG/CRDS, retraite, prévoyance et mutuelle forfaitaire.</p>
   </div>
 
   <!-- RECAP ANNUEL -->
@@ -288,9 +298,22 @@
 <script>
 // ── STATE ────────────────────────────────────────────────────────────
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const FIELDS  = ['tauxH','hBase','hSup25','hSup25Var','hSup50','hNuit','primePoliv','primeVeh','nbJours','fraisDep','absences'];
-const DEFAULTS = { tauxH:13, hBase:151.67, hSup25:17.33, hSup25Var:0, hSup50:0, hNuit:0, primePoliv:150, primeVeh:125, nbJours:0, fraisDep:0, absences:0 };
+const FIELDS  = ['tauxH','hBase','hSup25','hSup25Var','hSup50','compHeures','hNuit','primePoliv','primeVeh','primeTel','nbJours','fraisDep','absences'];
+const DEFAULTS = { tauxH:13, hBase:151.67, hSup25:17.33, hSup25Var:0, hSup50:0, compHeures:0, hNuit:0, primePoliv:150, primeVeh:120, primeTel:15, nbJours:0, fraisDep:0, absences:0 };
 const HS_REDUCTION_RATE = 0.1131;
+const EMPLOYEE_RATES = {
+  retraitePlafonnee: 0.069,
+  retraiteDeplafonnee: 0.004,
+  complementaireT1: 0.0401,
+  prevoyance: 0.007,
+  csgDeductible: 0.068,
+  csgCrds: 0.029,
+  csgCrdsHs: 0.097
+};
+const MUTUELLE_SALARIE = 24.63;
+const MUTUELLE_EMPLOYEUR = 57.47;
+const PREVOYANCE_EMPLOYEUR_RATE = 0.0105;
+const CSG_ABATTEMENT = 0.9825;
 
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
@@ -353,7 +376,8 @@ function div(label) { return `<div class="divider-row"><span class="divider-labe
 
 function calculer(doSave=true) {
   const tauxH=v('tauxH'), hBase=v('hBase'), hSup25=v('hSup25'), hSup25Rh=v('hSup25Var'), hSup50=v('hSup50'),
-        hNuit=v('hNuit'), primePoliv=v('primePoliv'), primeVeh=v('primeVeh'),
+        compHeures=v('compHeures'),
+        hNuit=v('hNuit'), primePoliv=v('primePoliv'), primeVeh=v('primeVeh'), primeTel=v('primeTel'),
         nbJours=v('nbJours'), fraisDep=v('fraisDep'), absences=v('absences');
 
   // Soumis aux cotisations
@@ -364,18 +388,31 @@ function calculer(doSave=true) {
   const hSup25_exo   = hSup25Total * tauxH * 0.25;
   const hSup50_base  = hSup50 * tauxH;
   const hSup50_exo   = hSup50 * tauxH * 0.50;
+  const compHeures_base = compHeures * tauxH;
   const hNuit_base   = hNuit  * tauxH;
   const hNuit_exo    = hNuit  * tauxH * 1.00;
-  const hSupRemun    = hSup25_base + hSup25_exo + hSup50_base + hSup50_exo;
+  const hSupRemun    = hSup25_base + hSup25_exo + hSup50_base + hSup50_exo + hNuit_base + hNuit_exo;
   const reducHs      = hSupRemun * HS_REDUCTION_RATE;
   const paniers      = nbJours * 15.96;
   const hParJour     = (hBase + hSup25) / 21.67;
   const deductAbs    = absences * hParJour * tauxH;
 
-  const brutSoumis   = salaireBase + hSup25_base + hSup50_base + hNuit_base + primePoliv + primeVeh - deductAbs;
+  const brutSoumis   = salaireBase + hSup25_base + hSup50_base + compHeures_base + hNuit_base + primePoliv + primeVeh + primeTel - deductAbs;
   const totalExo     = hSup25_exo + hSup50_exo + hNuit_exo;
   const brutTotal    = brutSoumis + totalExo;
-  const cotisations  = Math.max(brutSoumis * 0.22 - reducHs, 0);
+  const prevoyanceEmployeur = brutTotal * PREVOYANCE_EMPLOYEUR_RATE;
+  const csgBaseNormale = Math.max(brutTotal - hSupRemun, 0) * CSG_ABATTEMENT + MUTUELLE_EMPLOYEUR + prevoyanceEmployeur;
+  const csgBaseHs      = hSupRemun * CSG_ABATTEMENT;
+  const cotisationsHorsReduc =
+    brutTotal * EMPLOYEE_RATES.retraitePlafonnee +
+    brutTotal * EMPLOYEE_RATES.retraiteDeplafonnee +
+    brutTotal * EMPLOYEE_RATES.complementaireT1 +
+    brutTotal * EMPLOYEE_RATES.prevoyance +
+    MUTUELLE_SALARIE +
+    csgBaseNormale * EMPLOYEE_RATES.csgDeductible +
+    csgBaseNormale * EMPLOYEE_RATES.csgCrds +
+    csgBaseHs * EMPLOYEE_RATES.csgCrdsHs;
+  const cotisations  = Math.max(cotisationsHorsReduc - reducHs, 0);
   const totalFrais   = paniers + fraisDep;
   const netTotal     = (brutSoumis - cotisations) + totalExo + totalFrais;
 
@@ -393,12 +430,14 @@ function calculer(doSave=true) {
   if(hSup25>0) html += rr('H. sup contrat +25% — base ('+f(hSup25)+' h × 1×)', hSup25 * tauxH, 'pos');
   if(hSup25Extra>0) html += rr('H. sup +25% à ajouter — base ('+f(hSup25Extra)+' h × 1×)', hSup25Extra * tauxH, 'pos');
   if(hSup50>0) html += rr('H. sup +50% — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
+  if(compHeures>0) html += rr('Complément d\'heures ('+f(compHeures)+' h × 1×)', compHeures_base, 'pos');
   if(hNuit>0)  html += rr('H. nuit — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
   html += rr('Prime polyvalence', primePoliv, 'pos');
-  html += rr('Prime entretien véhicule', primeVeh, 'pos');
+  html += rr('Prime entretien assiduité', primeVeh, 'pos');
+  html += rr('Prime téléphone', primeTel, 'pos');
   if(deductAbs>0) html += rr('Absence ('+absences+' j)', -deductAbs, 'neg');
   html += `<div class="result-row subtotal"><span class="result-label" style="color:var(--text)">Sous-total brut soumis</span><span class="result-val neu">${f(brutSoumis)} €</span></div>`;
-  html += rr('Cotisations salariales (~22%, après réduction HS)', -cotisations, 'neg');
+  html += rr('Cotisations salariales estimées bulletin', -cotisations, 'neg');
 
   if(totalExo>0) {
     html += div('⚡ Exonérations loi TEPA');
@@ -423,7 +462,7 @@ function calculer(doSave=true) {
   if (doSave) {
     const defaults = {
       tauxH: v('tauxH'), hBase: v('hBase'), hSup25: v('hSup25'),
-      primePoliv: v('primePoliv'), primeVeh: v('primeVeh')
+      primePoliv: v('primePoliv'), primeVeh: v('primeVeh'), primeTel: v('primeTel')
     };
     localStorage.setItem('paie_defaults', JSON.stringify(defaults));
 
@@ -564,9 +603,11 @@ function exportPDF() {
   <tr><td>H. sup contrat +25%</td><td style="text-align:right">${d.hSup25} h</td></tr>
   <tr><td>Total fiche RH +25%</td><td style="text-align:right">${d.hSup25Var || 0} h</td></tr>
   <tr><td>H. sup +50% (au-delà 43h)</td><td style="text-align:right">${d.hSup50} h</td></tr>
+  <tr><td>Complément d'heures</td><td style="text-align:right">${d.compHeures || 0} h</td></tr>
   <tr><td>Heures de nuit (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
   <tr><td>Prime polyvalence</td><td style="text-align:right">${d.primePoliv} €</td></tr>
-  <tr><td>Prime entretien véhicule</td><td style="text-align:right">${d.primeVeh} €</td></tr>
+  <tr><td>Prime entretien assiduité</td><td style="text-align:right">${d.primeVeh} €</td></tr>
+  <tr><td>Prime téléphone</td><td style="text-align:right">${d.primeTel || 0} €</td></tr>
   <tr><td>Paniers repas (${d.nbJours} j × 15,96 €)</td><td style="text-align:right">${(d.nbJours*15.96).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>
   <tr><td>Frais de déplacement</td><td style="text-align:right">${d.fraisDep} €</td></tr>
   <tr><td>Absences</td><td style="text-align:right">${d.absences} j</td></tr>
