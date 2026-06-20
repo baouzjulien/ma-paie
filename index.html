@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ma Paie">
-<meta name="theme-color" content="#0a0f1e">
+<meta name="theme-color" content="#f5f4f0">
 <title>Ma Fiche de Paie</title>
 <link rel="manifest" href="/ma-paie/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/ma-paie/favicon-32.png">
@@ -168,35 +168,71 @@
   .recap-grid{gap:10px}.recap-month{background:white;border:var(--bordure-fine);border-radius:0}.recap-month.active{border-color:var(--noir);background:#fef3cd}.recap-month.empty{opacity:.55}.recap-month-net{font-family:var(--font-sans);color:var(--noir)}.recap-month-net.has-data{color:var(--vert)}
   .recap-total{border:var(--bordure);border-radius:0;background:var(--gris-leger)}.recap-total-val{font-family:var(--font-sans);color:var(--accent)}
   .toast{background:var(--noir);color:var(--blanc);font-family:var(--font-mono);border:2px solid var(--blanc);border-radius:0;box-shadow:4px 4px 0 rgba(0,0,0,.3)}
-  @media(max-width:640px){body{padding:14px 10px 48px}.app{box-shadow:4px 4px 0 var(--noir)}header{padding:16px;align-items:flex-start}.header-brand{gap:12px}.app-logo{width:64px;height:64px}h1{font-size:20px}.hero-card{padding:16px}.hero-amount{font-size:36px}.section{margin:16px}.btn-calc{margin-left:16px;margin-right:16px;width:calc(100% - 32px)}.data-toolbar{margin-left:16px;margin-right:16px}.row{padding:11px 12px;gap:8px}input[type=number]{width:78px}}
+  @media(max-width:640px){body{padding:14px 10px 48px}.app{box-shadow:4px 4px 0 var(--noir)}.header-brand{gap:12px}.app-logo{width:64px;height:64px}h1{font-size:20px}.hero-card{padding:16px}.hero-amount{font-size:36px}.btn-calc{margin-left:16px;margin-right:16px;width:calc(100% - 32px)}.data-toolbar{margin-left:16px;margin-right:16px}.row{padding:11px 12px;gap:8px}input[type=number]{width:78px}}
+
+  /* FINITIONS DE LISIBILITE */
+  .app{background:#deddd7}
+  header{display:block;padding:0;background:var(--blanc)}
+  .header-main{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 22px}
+  .header-brand{min-width:0}.header-brand>div{min-width:0}
+  h1{font-size:23px;line-height:1.15;white-space:nowrap}
+  .nav-bar{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:12px;padding:12px 22px;background:var(--gris-leger);border-top:var(--bordure-fine)}
+  .period-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .period-label{font-family:var(--font-mono);font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--gris-fonce)}
+  .month-select{width:100%;min-height:42px;padding:8px 12px;font-size:14px;font-weight:600;color:var(--noir);background:white;border:2px solid var(--noir)}
+  .year-ctrl{min-height:42px;padding:0 8px;gap:8px;background:white;border:2px solid var(--noir)}
+  .year-btn{width:30px;height:36px;font-size:24px;color:var(--noir)}
+  .year-val{min-width:48px;font-size:15px;font-weight:600;color:var(--noir)!important;background:white;text-align:center}
+  .saved-badge{flex:0 0 auto;white-space:nowrap}
+  .section{margin:0;padding:18px 22px;background:#deddd7;border-bottom:1px solid #aaa9a3}
+  .section-title{font-size:10px;font-weight:600;color:#4f4e49;margin-bottom:9px}
+  .card,.result-card{background:#fff;border:2px solid var(--noir);box-shadow:2px 2px 0 #aaa9a3}
+  .row{background:#fff}.row:nth-child(even){background:#faf9f6}
+  .field-note{background:#f0efe9;color:#55544f}
+  .recap-month{background:#fff}.recap-total{background:#f2f1ec}
+  @media(max-width:640px){
+    .header-main{padding:12px 14px}.header-brand{gap:10px}.app-logo{width:58px;height:58px}h1{font-size:19px}
+    .logo-label{font-size:9px;margin-bottom:4px}.saved-badge{font-size:8px;padding:3px 5px}
+    .nav-bar{grid-template-columns:minmax(0,1fr) auto;padding:10px 14px;gap:9px}
+    .month-select{font-size:13px;min-height:40px}.year-ctrl{min-height:40px;gap:4px}.year-btn{width:26px}.year-val{font-size:14px;min-width:42px}
+    .section{padding:16px 14px}.hero-card{padding:16px 14px}
+  }
 </style>
 </head>
 <body>
 <div class="app">
 
   <header>
-    <div class="header-brand">
-      <img class="app-logo" src="logo-paie-transparent.png" alt="">
-      <div>
-        <div class="logo-label">Calcul Mensuel</div>
-        <h1>Ma Fiche<br>de Paie</h1>
+    <div class="header-main">
+      <div class="header-brand">
+        <img class="app-logo" src="logo-paie-transparent.png" alt="">
+        <div>
+          <div class="logo-label">Calcul mensuel</div>
+          <h1>Ma fiche de paie</h1>
+        </div>
       </div>
+      <span class="saved-badge" id="savedBadge">✓ sauvegardé</span>
     </div>
     <div class="nav-bar">
-      <div class="year-ctrl">
-        <button class="year-btn" onclick="changeYear(-1)">‹</button>
-        <span class="year-val" id="yearVal">2025</span>
-        <button class="year-btn" onclick="changeYear(1)">›</button>
+      <label class="period-field">
+        <span class="period-label">Mois</span>
+        <select class="month-select" id="monthSel" onchange="loadMonth()">
+          <option value="0">Janvier</option><option value="1">Février</option>
+          <option value="2">Mars</option><option value="3">Avril</option>
+          <option value="4">Mai</option><option value="5">Juin</option>
+          <option value="6">Juillet</option><option value="7">Août</option>
+          <option value="8">Septembre</option><option value="9">Octobre</option>
+          <option value="10">Novembre</option><option value="11">Décembre</option>
+        </select>
+      </label>
+      <div class="period-field">
+        <span class="period-label">Année</span>
+        <div class="year-ctrl">
+          <button class="year-btn" onclick="changeYear(-1)" aria-label="Année précédente">‹</button>
+          <span class="year-val" id="yearVal">2025</span>
+          <button class="year-btn" onclick="changeYear(1)" aria-label="Année suivante">›</button>
+        </div>
       </div>
-      <select class="month-select" id="monthSel" onchange="loadMonth()">
-        <option value="0">Janvier</option><option value="1">Février</option>
-        <option value="2">Mars</option><option value="3">Avril</option>
-        <option value="4">Mai</option><option value="5">Juin</option>
-        <option value="6">Juillet</option><option value="7">Août</option>
-        <option value="8">Septembre</option><option value="9">Octobre</option>
-        <option value="10">Novembre</option><option value="11">Décembre</option>
-      </select>
-      <span class="saved-badge" id="savedBadge">✓ sauvegardé</span>
     </div>
   </header>
 
@@ -244,27 +280,27 @@
 
   <!-- VARIABLES -->
   <div class="section">
-    <div class="section-title">Récapitulatif RH - variables</div>
+    <div class="section-title">Heures variables</div>
     <div class="card">
-      <div class="field-note"><strong>Saisie depuis le récap RH.</strong> Les repas peuvent couvrir plus de semaines que les heures variables : recopie chaque total tel qu'il apparaît en bas du relevé RH.</div>
+      <div class="field-note"><strong>Saisie depuis tes relevés terrain papier.</strong> Additionne uniquement les semaines prises en compte pour la paie du mois.</div>
       <div class="row">
         <div class="row-icon icon-orange">⏱</div>
-        <div class="row-info"><div class="row-label">HS 25% RH</div><div class="row-desc">L'app déduit automatiquement les 17,33 h contrat</div></div>
+        <div class="row-info"><div class="row-label">Heures à 25%</div><div class="row-desc">L'app déduit automatiquement les 17,33 h du contrat</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup25Var" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-orange">🕐</div>
-        <div class="row-info"><div class="row-label">HS 50% RH</div><div class="row-desc">Ligne HS 50% du récapitulatif RH</div></div>
+        <div class="row-info"><div class="row-label">Heures à 50%</div><div class="row-desc">Total des heures effectuées au-delà de 43 h par semaine</div></div>
         <div class="row-input-wrap"><input type="number" id="hSup50" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-blue">⏱</div>
-        <div class="row-info"><div class="row-label">HS non majorées RH</div><div class="row-desc">Payées au taux normal, sans majoration</div></div>
+        <div class="row-info"><div class="row-label">Heures non majorées</div><div class="row-desc">Payées au taux normal, notamment selon les jours fériés</div></div>
         <div class="row-input-wrap"><input type="number" id="compHeures" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
       <div class="row">
         <div class="row-icon icon-purple">🌙</div>
-        <div class="row-info"><div class="row-label">Nuit RH (+100%)</div><div class="row-desc">Ligne Nuit du récapitulatif RH</div></div>
+        <div class="row-info"><div class="row-label">Heures de nuit (+100%)</div><div class="row-desc">Total des heures de nuit relevées sur le terrain</div></div>
         <div class="row-input-wrap"><input type="number" id="hNuit" value="0" min="0" step="0.5"><span class="unit">h</span></div>
       </div>
     </div>
@@ -291,7 +327,7 @@
       </div>
       <div class="row">
         <div class="row-icon icon-green">🍽</div>
-        <div class="row-info"><div class="row-label">Repas RH (paniers)</div><div class="row-desc">Total repas du relevé RH, même si les variables sont arrêtées plus tôt</div></div>
+        <div class="row-info"><div class="row-label">Repas (paniers)</div><div class="row-desc">Total des repas notés sur la période complète</div></div>
         <div class="row-input-wrap"><input type="number" id="nbJours" value="0" min="0" max="31"><span class="unit">j</span></div>
       </div>
       <div class="row">
@@ -483,11 +519,11 @@ function calculer(doSave=true) {
   let html = div('Éléments soumis aux cotisations');
   html += rr('Salaire de base ('+f(hBase)+' h × '+tauxH+' €)', salaireBase, 'pos');
   if(hSup25>0) html += rr('H. sup contrat +25% — base ('+f(hSup25)+' h × 1×)', hSup25 * tauxH, 'pos');
-  if(hSup25Rh>0) html += infoRow('HS 25% RH saisis', f(hSup25Rh)+' h → variable après contrat : '+f(hSup25Extra)+' h');
-  if(hSup25Extra>0) html += rr('HS 25% RH à ajouter — base ('+f(hSup25Extra)+' h × 1×)', hSup25Extra * tauxH, 'pos');
-  if(hSup50>0) html += rr('HS 50% RH — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
-  if(compHeures>0) html += rr('HS non majorées RH ('+f(compHeures)+' h × 1×)', compHeures_base, 'pos');
-  if(hNuit>0)  html += rr('Nuit RH — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
+  if(hSup25Rh>0) html += infoRow('Heures à 25% saisies', f(hSup25Rh)+' h → variable après contrat : '+f(hSup25Extra)+' h');
+  if(hSup25Extra>0) html += rr('Heures à 25% à ajouter — base ('+f(hSup25Extra)+' h × 1×)', hSup25Extra * tauxH, 'pos');
+  if(hSup50>0) html += rr('Heures à 50% — base ('+hSup50+' h × 1×)', hSup50_base, 'pos');
+  if(compHeures>0) html += rr('Heures non majorées ('+f(compHeures)+' h × 1×)', compHeures_base, 'pos');
+  if(hNuit>0)  html += rr('Heures de nuit — base ('+hNuit+' h × 1×)', hNuit_base, 'pos');
   html += rr('Prime polyvalence', primePoliv, 'pos');
   html += rr('Prime entretien assiduité', primeVeh, 'pos');
   html += rr('Prime téléphone', primeTel, 'pos');
@@ -498,9 +534,9 @@ function calculer(doSave=true) {
   if(totalExo>0) {
     html += div('⚡ Exonérations loi TEPA');
     if(hSup25>0) html += rr('H. sup contrat +25% — majoration (+0,25×)', hSup25 * tauxH * 0.25, 'pos', 'exo');
-    if(hSup25Extra>0) html += rr('HS 25% RH à ajouter — majoration (+0,25×)', hSup25Extra * tauxH * 0.25, 'pos', 'exo');
-    if(hSup50>0) html += rr('HS 50% RH — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
-    if(hNuit>0)  html += rr('Nuit RH — majoration (+100%)', hNuit_exo, 'pos', 'exo');
+    if(hSup25Extra>0) html += rr('Heures à 25% à ajouter — majoration (+0,25×)', hSup25Extra * tauxH * 0.25, 'pos', 'exo');
+    if(hSup50>0) html += rr('Heures à 50% — majoration (+0,50×)', hSup50_exo, 'pos', 'exo');
+    if(hNuit>0)  html += rr('Heures de nuit — majoration (+100%)', hNuit_exo, 'pos', 'exo');
     if(reducHs>0) html += rr('Réduction cotisations salariales HS (11,31%)', reducHs, 'pos', 'exo');
   }
 
@@ -657,14 +693,14 @@ function exportPDF() {
   <tr><td>Taux horaire</td><td style="text-align:right">${d.tauxH} €/h</td></tr>
   <tr><td>Heures de base (35h)</td><td style="text-align:right">${d.hBase} h</td></tr>
   <tr><td>H. sup contrat +25%</td><td style="text-align:right">${d.hSup25} h</td></tr>
-  <tr><td>HS 25% RH</td><td style="text-align:right">${d.hSup25Var || 0} h</td></tr>
-  <tr><td>HS 50% RH</td><td style="text-align:right">${d.hSup50} h</td></tr>
-  <tr><td>HS non majorées RH</td><td style="text-align:right">${d.compHeures || 0} h</td></tr>
-  <tr><td>Nuit RH (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
+  <tr><td>Heures à 25%</td><td style="text-align:right">${d.hSup25Var || 0} h</td></tr>
+  <tr><td>Heures à 50%</td><td style="text-align:right">${d.hSup50} h</td></tr>
+  <tr><td>Heures non majorées</td><td style="text-align:right">${d.compHeures || 0} h</td></tr>
+  <tr><td>Heures de nuit (+100%)</td><td style="text-align:right">${d.hNuit} h</td></tr>
   <tr><td>Prime polyvalence</td><td style="text-align:right">${d.primePoliv} €</td></tr>
   <tr><td>Prime entretien assiduité</td><td style="text-align:right">${d.primeVeh} €</td></tr>
   <tr><td>Prime téléphone</td><td style="text-align:right">${d.primeTel || 0} €</td></tr>
-  <tr><td>Repas RH / paniers (${d.nbJours} j × 15,96 €)</td><td style="text-align:right">${(d.nbJours*15.96).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>
+  <tr><td>Repas / paniers (${d.nbJours} j × 15,96 €)</td><td style="text-align:right">${(d.nbJours*15.96).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>
   <tr><td>Frais de déplacement</td><td style="text-align:right">${d.fraisDep} €</td></tr>
   <tr><td>Absences</td><td style="text-align:right">${d.absences} j</td></tr>
   </tbody></table>

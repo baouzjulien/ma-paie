@@ -6,8 +6,8 @@
   "scope": "/ma-paie/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#d9d8d2",
-  "theme_color": "#1a1a2e",
+  "background_color": "#ffffff",
+  "theme_color": "#f5f4f0",
   "icons": [
     {
       "src": "/ma-paie/icon-192.png",
