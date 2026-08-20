@@ -85,6 +85,7 @@
   .btn-tool:hover{border-color:var(--accent);color:var(--accent);}
   .btn-tool.danger:hover{border-color:var(--accent2);color:var(--accent2);}
   .btn-tool .ico{font-size:15px;}
+  .sync-status{margin:0 16px 10px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
   #importFile{display:none;}
 
   /* ANNUAL RECAP */
@@ -161,6 +162,7 @@
   .btn-calc,.btn-tool{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border:2px solid var(--noir);border-radius:0;box-shadow:2px 2px 0 var(--noir);transition:all .15s}
   .btn-calc{background:var(--accent);color:var(--blanc);margin:18px 22px 14px;width:calc(100% - 44px)}.btn-calc:hover,.btn-tool:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--noir)}
   .data-toolbar{margin:0 22px 18px}.btn-tool{background:var(--blanc);color:var(--noir)}.btn-tool.danger:hover{background:var(--rouge);color:white;border-color:var(--rouge)}
+  .sync-status{margin:0 22px 10px;color:var(--gris-fonce)}
   .result-row{border-bottom:var(--bordure-fine);padding:10px 14px}.result-row.subtotal{background:var(--gris-leger)}.result-row.exo{background:#e8f5ee}.result-row.total{background:var(--accent);border-top:var(--bordure);padding:14px}
   .result-row.total .result-label,.result-row.total .result-val{color:var(--blanc)!important}.result-label{color:var(--gris-fonce)}.result-val{color:var(--noir)}
   .result-val.pos{color:var(--vert)}.result-val.neg{color:var(--rouge)}.result-val.big{font-family:var(--font-sans);font-size:22px;color:var(--blanc)}
@@ -369,11 +371,13 @@
   <!-- DATA TOOLBAR -->
   <div class="section">
     <div class="section-title">Données</div>
+    <div class="sync-status" id="syncStatus">Sauvegarde locale active</div>
     <div class="data-toolbar">
       <button class="btn-tool" onclick="exportJSON()"><span class="ico">💾</span> Exporter JSON</button>
       <button class="btn-tool" onclick="document.getElementById('importFile').click()"><span class="ico">📂</span> Importer JSON</button>
       <input type="file" id="importFile" accept=".json" onchange="importJSON(event)">
       <button class="btn-tool" onclick="exportPDF()"><span class="ico">📄</span> Export PDF</button>
+      <button class="btn-tool" onclick="syncNow()"><span class="ico">⇄</span> Synchroniser</button>
       <button class="btn-tool danger" onclick="clearYear()"><span class="ico">🗑</span> Effacer année</button>
     </div>
   </div>
@@ -402,22 +406,88 @@ const MUTUELLE_SALARIE = 24.63;
 const MUTUELLE_EMPLOYEUR = 57.47;
 const PREVOYANCE_EMPLOYEUR_RATE = 0.0105;
 const CSG_ABATTEMENT = 0.9825;
+const SYNC_API_URL = 'https://script.google.com/macros/s/AKfycbwy-ggqE172jAStHVDCHZqfG58AdTSv26E13jkL-tsxFXJo6amdxx0nyOAdUFJdeqU/exec';
+const SYNC_DELAY = 1500;
+const SYNC_QUEUE_KEY = 'paie_sync_queue';
+const DEVICE_ID_KEY = 'paie_device_id';
 
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
+let syncTimer = null;
+let syncInProgress = null;
+let syncRerun = false;
+let lastSavedSignature = '';
+const DEVICE_ID = getDeviceId();
 
 // ── INIT ─────────────────────────────────────────────────────────────
 document.getElementById('yearVal').textContent = currentYear;
 document.getElementById('monthSel').value = currentMonth;
 loadMonth();
+initSync();
 
 // ── STORAGE KEY ──────────────────────────────────────────────────────
 function key(y, m) { return `paie_${y}_${String(m).padStart(2,'0')}`; }
+function monthKey(y, m) { return `${y}-${String(m + 1).padStart(2,'0')}`; }
+
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
+function getSyncQueue() {
+  try { return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function setSyncQueue(items) {
+  localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify([...new Set(items)]));
+}
+
+function enqueueSync(y, m) {
+  setSyncQueue([...getSyncQueue(), key(y, m)]);
+}
+
+function isRemoteConfigured() {
+  return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(SYNC_API_URL);
+}
+
+function updateSyncStatus(message, color) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = message;
+  if (color) el.style.color = color;
+}
+
+function normalizeMonthData(data, y, m, markDirty=false) {
+  const normalized = {...data};
+  normalized._year = y;
+  normalized._month = m;
+  normalized._monthKey = monthKey(y, m);
+  normalized._deviceId = normalized._deviceId || DEVICE_ID;
+  if (markDirty || !normalized._updatedAt) normalized._updatedAt = new Date().toISOString();
+  return normalized;
+}
+
+function localMonthData(y, m) {
+  const raw = localStorage.getItem(key(y, m));
+  if (!raw) return null;
+  try { return JSON.parse(raw); }
+  catch(e) { return null; }
+}
 
 // ── SAVE / LOAD ───────────────────────────────────────────────────────
-function saveMonth(data) {
-  localStorage.setItem(key(currentYear, currentMonth), JSON.stringify(data));
+function saveMonth(data, options = {}) {
+  const normalized = normalizeMonthData(data, currentYear, currentMonth, options.markDirty !== false);
+  localStorage.setItem(key(currentYear, currentMonth), JSON.stringify(normalized));
   showBadge();
+  if (options.remote !== false) {
+    enqueueSync(currentYear, currentMonth);
+    scheduleSync();
+  }
 }
 
 function loadMonth() {
@@ -452,6 +522,7 @@ function changeYear(delta) {
   currentYear += delta;
   document.getElementById('yearVal').textContent = currentYear;
   loadMonth();
+  syncYearFromServer(currentYear);
 }
 
 // ── CALC ──────────────────────────────────────────────────────────────
@@ -566,6 +637,189 @@ function calculer(doSave=true) {
     toast('✓ Sauvegardé pour ' + MONTHS[currentMonth]);
     // Pas de scroll automatique — l'utilisateur fait défiler lui-même
   }
+
+  return { netTotal, brutTotal };
+}
+
+function autoSaveCurrentMonth() {
+  const metrics = calculer(false) || {};
+  const defaults = {
+    tauxH: v('tauxH'), hBase: v('hBase'), hSup25: v('hSup25'),
+    primePoliv: v('primePoliv'), primeVeh: v('primeVeh'), primeTel: v('primeTel')
+  };
+  localStorage.setItem('paie_defaults', JSON.stringify(defaults));
+
+  const data = getFormData();
+  data._net = metrics.netTotal || 0;
+  data._brut = metrics.brutTotal || 0;
+  saveMonth(data, { remote:true, markDirty:true });
+  buildRecap();
+  updateSyncStatus(isRemoteConfigured() ? 'Sauvegarde en attente...' : 'Sauvegarde locale active');
+}
+
+function scheduleAutoSave() {
+  clearTimeout(window.autoSaveTimer);
+  window.autoSaveTimer = setTimeout(autoSaveCurrentMonth, 350);
+}
+
+// ── SYNCHRO GOOGLE SHEETS ─────────────────────────────────────────────
+function initSync() {
+  if (!isRemoteConfigured()) {
+    updateSyncStatus('Sauvegarde locale active - Google Sheet non configure');
+    return;
+  }
+  updateSyncStatus('Synchro Google Sheet active');
+  syncYearFromServer(currentYear);
+  if (getSyncQueue().length) scheduleSync();
+}
+
+function scheduleSync() {
+  if (!isRemoteConfigured()) {
+    updateSyncStatus('Sauvegarde locale active - Google Sheet non configure');
+    return;
+  }
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => flushSync({ silent:true }), SYNC_DELAY);
+}
+
+async function syncNow() {
+  if (!isRemoteConfigured()) {
+    toast('Google Sheet non configure');
+    updateSyncStatus('Sauvegarde locale active - Google Sheet non configure');
+    return false;
+  }
+  await syncYearFromServer(currentYear);
+  return flushSync({ silent:false });
+}
+
+async function syncYearFromServer(year) {
+  if (!isRemoteConfigured()) return false;
+  try {
+    updateSyncStatus('Lecture Google Sheet...');
+    const params = new URLSearchParams({ action:'getYear', year:String(year), deviceId:DEVICE_ID });
+    const res = await fetch(`${SYNC_API_URL}?${params.toString()}`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Erreur synchro');
+
+    let changed = false;
+    (json.months || []).forEach(remote => {
+      const m = Number(remote._month);
+      if (!Number.isInteger(m) || m < 0 || m > 11) return;
+      const local = localMonthData(year, m);
+      const localTime = Date.parse(local && local._updatedAt || '') || 0;
+      const remoteTime = Date.parse(remote._updatedAt || '') || 0;
+      if (!local || remoteTime > localTime) {
+        localStorage.setItem(key(year, m), JSON.stringify(remote));
+        changed = true;
+      } else if (localTime > remoteTime) {
+        enqueueSync(year, m);
+      }
+    });
+
+    if (changed) {
+      loadMonth();
+      buildRecap();
+    }
+    updateSyncStatus('Synchro Google Sheet a jour');
+    return true;
+  } catch(e) {
+    updateSyncStatus('Synchro impossible - donnees gardees en local', 'var(--rouge)');
+    return false;
+  }
+}
+
+async function flushSync(options = {}) {
+  if (!isRemoteConfigured()) return false;
+  if (syncInProgress) {
+    syncRerun = true;
+    return syncInProgress;
+  }
+
+  const run = async () => {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    const queue = getSyncQueue();
+    if (!queue.length) {
+      updateSyncStatus('Synchro Google Sheet a jour');
+      return true;
+    }
+
+    updateSyncStatus('Envoi Google Sheet...');
+    const remaining = [];
+    for (const storageKey of queue) {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) continue;
+      const data = JSON.parse(raw);
+      const signature = storageKey + ':' + (data._updatedAt || '');
+      if (signature === lastSavedSignature) continue;
+
+      try {
+        const res = await fetch(SYNC_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action:'saveMonth', deviceId:DEVICE_ID, month:data })
+        });
+        const json = await res.json();
+        if (!json.success) {
+          if (json.remote) mergeRemoteConflict(json.remote);
+          remaining.push(storageKey);
+          continue;
+        }
+        if (json.remote) mergeRemoteConflict(json.remote);
+        lastSavedSignature = signature;
+      } catch(e) {
+        remaining.push(storageKey);
+      }
+    }
+
+    setSyncQueue(remaining);
+    if (remaining.length) {
+      updateSyncStatus('Synchro en attente - donnees gardees en local', 'var(--rouge)');
+      if (!options.silent) toast('Synchro impossible, sauvegarde locale conservee');
+      return false;
+    }
+
+    updateSyncStatus('Synchro Google Sheet a jour');
+    if (!options.silent) toast('Synchronise avec Google Sheet');
+    return true;
+  };
+
+  syncInProgress = run();
+  const ok = await syncInProgress;
+  syncInProgress = null;
+
+  if (syncRerun) {
+    syncRerun = false;
+    return flushSync({ silent:true });
+  }
+  return ok;
+}
+
+function mergeRemoteConflict(remote) {
+  const y = Number(remote._year);
+  const m = Number(remote._month);
+  if (!Number.isInteger(y) || !Number.isInteger(m)) return;
+  const local = localMonthData(y, m);
+  const localTime = Date.parse(local && local._updatedAt || '') || 0;
+  const remoteTime = Date.parse(remote._updatedAt || '') || 0;
+  if (!local || remoteTime > localTime) {
+    localStorage.setItem(key(y, m), JSON.stringify(remote));
+    if (y === currentYear && m === currentMonth) loadMonth();
+    buildRecap();
+  }
+}
+
+function flushWithBeacon() {
+  if (!isRemoteConfigured() || !navigator.sendBeacon) return;
+  const queue = getSyncQueue();
+  queue.forEach(storageKey => {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return;
+    navigator.sendBeacon(SYNC_API_URL, JSON.stringify({
+      action:'saveMonth',
+      deviceId:DEVICE_ID,
+      month:JSON.parse(raw)
+    }));
+  });
 }
 
 // ── RECAP ─────────────────────────────────────────────────────────────
@@ -633,13 +887,16 @@ function importJSON(event) {
       let count = 0;
       MONTHS.forEach((name, idx) => {
         if (données[name]) {
-          localStorage.setItem(key(année, idx), JSON.stringify(données[name]));
+          const imported = normalizeMonthData(données[name], année, idx, true);
+          localStorage.setItem(key(année, idx), JSON.stringify(imported));
+          enqueueSync(année, idx);
           count++;
         }
       });
       currentYear = année;
       document.getElementById('yearVal').textContent = currentYear;
       loadMonth();
+      scheduleSync();
       toast(`✅ ${count} mois importés pour ${année}`);
     } catch(err) {
       toast('❌ Fichier invalide');
@@ -739,8 +996,15 @@ function toast(msg) {
 // Sélectionner tout le contenu au focus (évite le curseur à gauche)
 document.querySelectorAll('input[type=number]').forEach(inp => {
   inp.addEventListener('focus', () => inp.select());
+  inp.addEventListener('input', scheduleAutoSave);
+  inp.addEventListener('change', autoSaveCurrentMonth);
 });
-// Plus de recalcul automatique sur changement — l'utilisateur clique sur le bouton
+
+window.addEventListener('pagehide', flushWithBeacon);
+window.addEventListener('beforeunload', flushWithBeacon);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushWithBeacon();
+});
 
 // PWA install
 let deferredPrompt;
