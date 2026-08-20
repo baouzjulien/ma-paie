@@ -31,15 +31,15 @@ function doGet(e) {
   const action = String((e.parameter && e.parameter.action) || '').trim();
   try {
     ensureSheets();
-    if (action === 'getYear') return json(getYear(e));
+    if (action === 'getYear') return json(getYear(e), e);
     if (action === 'saveMonth') {
       const payload = JSON.parse(String(e.parameter.payload || '{}'));
-      return json(saveMonth(payload, e));
+      return json(saveMonth(payload, e), e);
     }
-    return json({ success:false, error:'Action inconnue' });
+    return json({ success:false, error:'Action inconnue' }, e);
   } catch (err) {
     audit('ERREUR_GET', String(err), e);
-    return json({ success:false, error:String(err) });
+    return json({ success:false, error:String(err) }, e);
   }
 }
 
@@ -55,9 +55,16 @@ function doPost(e) {
   }
 }
 
-function json(obj) {
+function json(obj, event) {
+  const callback = event && event.parameter && String(event.parameter.callback || '').trim();
+  const body = JSON.stringify(obj);
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + body + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
-    .createTextOutput(JSON.stringify(obj))
+    .createTextOutput(body)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
