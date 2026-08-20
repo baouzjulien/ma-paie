@@ -417,6 +417,7 @@ let syncTimer = null;
 let syncInProgress = null;
 let syncRerun = false;
 let lastSavedSignature = '';
+let lastSyncError = '';
 const DEVICE_ID = getDeviceId();
 
 // ── INIT ─────────────────────────────────────────────────────────────
@@ -483,7 +484,7 @@ function isRemoteConfigured() {
 function updateSyncStatus(message, color) {
   const el = document.getElementById('syncStatus');
   if (!el) return;
-  el.textContent = message;
+  el.textContent = lastSyncError ? `${message} (${lastSyncError})` : message;
   if (color) el.style.color = color;
 }
 
@@ -715,7 +716,7 @@ function jsonpRequest(params, timeout = 12000) {
     const query = new URLSearchParams({...params, callback:callbackName});
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Delai synchro depasse'));
+      reject(new Error('reponse Apps Script absente'));
     }, timeout);
 
     function cleanup() {
@@ -731,7 +732,7 @@ function jsonpRequest(params, timeout = 12000) {
 
     script.onerror = () => {
       cleanup();
-      reject(new Error('Script Google inaccessible'));
+      reject(new Error('script Google inaccessible'));
     };
     script.src = `${SYNC_API_URL}?${query.toString()}`;
     document.body.appendChild(script);
@@ -744,14 +745,32 @@ async function syncNow() {
     updateSyncStatus('Sauvegarde locale active - Google Sheet non configure');
     return false;
   }
+  const pingOk = await pingSyncServer();
+  if (!pingOk) return false;
   enqueueLocalYear(currentYear);
   await syncYearFromServer(currentYear);
   return flushSync({ silent:false });
 }
 
+async function pingSyncServer() {
+  try {
+    lastSyncError = '';
+    updateSyncStatus('Test Google Sheet...');
+    const json = await jsonpRequest({ action:'ping', deviceId:DEVICE_ID }, 8000);
+    if (!json.success) throw new Error(json.error || 'ping refuse');
+    return true;
+  } catch(e) {
+    lastSyncError = e && e.message ? e.message : String(e);
+    updateSyncStatus('Apps Script non accessible ou ancienne version', 'var(--rouge)');
+    toast('Apps Script non accessible ou non redeploye');
+    return false;
+  }
+}
+
 async function syncYearFromServer(year) {
   if (!isRemoteConfigured()) return false;
   try {
+    lastSyncError = '';
     updateSyncStatus('Lecture Google Sheet...');
     const json = await jsonpRequest({ action:'getYear', year:String(year), deviceId:DEVICE_ID });
     if (!json.success) throw new Error(json.error || 'Erreur synchro');
@@ -784,6 +803,7 @@ async function syncYearFromServer(year) {
     updateSyncStatus('Synchro Google Sheet a jour');
     return true;
   } catch(e) {
+    lastSyncError = e && e.message ? e.message : String(e);
     updateSyncStatus('Synchro impossible - donnees gardees en local', 'var(--rouge)');
     return false;
   }
@@ -817,13 +837,16 @@ async function flushSync(options = {}) {
       try {
         const json = await saveRemoteMonth(data);
         if (!json.success) {
+          lastSyncError = json.error || 'reponse Apps Script refusee';
           if (json.remote) mergeRemoteConflict(json.remote);
           remaining.push(storageKey);
           continue;
         }
+        lastSyncError = '';
         if (json.remote) mergeRemoteConflict(json.remote);
         lastSavedSignature = signature;
       } catch(e) {
+        lastSyncError = e && e.message ? e.message : String(e);
         remaining.push(storageKey);
       }
     }
