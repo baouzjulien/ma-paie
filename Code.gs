@@ -32,6 +32,10 @@ function doGet(e) {
   try {
     ensureSheets();
     if (action === 'getYear') return json(getYear(e));
+    if (action === 'saveMonth') {
+      const payload = JSON.parse(String(e.parameter.payload || '{}'));
+      return json(saveMonth(payload, e));
+    }
     return json({ success:false, error:'Action inconnue' });
   } catch (err) {
     audit('ERREUR_GET', String(err), e);
